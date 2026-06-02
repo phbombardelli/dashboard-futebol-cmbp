@@ -278,6 +278,28 @@
           </div>
         </div>
       </div>
+
+      <!-- ── IMPORTAR DESDE PLANILLA ── -->
+      <div class="section">
+        <div class="section-title">Importar desde Planilla</div>
+        <div class="equipo-form" style="gap:12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;line-height:1.8">
+            Columnas requeridas: <strong style="color:var(--text)">EQUIPO &nbsp;·&nbsp; CATEGORIA &nbsp;·&nbsp; JUGADOR</strong>
+            &nbsp;— una fila por jugador, repitiendo equipo/categoría en cada fila.
+            <br>
+            <a href="modelo-equipos.csv" download style="color:var(--green);text-decoration:none;border-bottom:1px solid rgba(0,200,83,0.3);">⬇ Descargar planilla modelo</a>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <label id="import-label" style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:8px;transition:border-color 0.2s,color 0.2s">
+              📄 <span id="import-filename">Seleccionar archivo .csv o .xlsx</span>
+              <input type="file" id="import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="onImportFileChange(this)">
+            </label>
+            <button class="btn btn-primary" onclick="previewImport()">Vista previa</button>
+          </div>
+          <div id="import-preview" style="display:none"></div>
+        </div>
+      </div>
+
       <div class="section">
         <div class="section-title">Equipos Registrados</div>
         <div id="equipos-list"><div class="empty">Cargando equipos...</div></div>
@@ -306,6 +328,7 @@
 
 <div id="toast">✓ Guardado</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp }
     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1047,6 +1070,140 @@ window.exportTxt = function() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `torneo-cmbp-${Date.now()}.txt`; a.click();
 };
+
+  // ══════════════════════════════════════
+  //  IMPORTAR EQUIPOS DESDE PLANILLA
+  // ══════════════════════════════════════
+  let pendingImport = [];
+
+  window.onImportFileChange = function(input) {
+    const f    = input.files[0];
+    const lbl  = document.getElementById('import-label');
+    const name = document.getElementById('import-filename');
+    if (f) {
+      name.textContent      = f.name;
+      lbl.style.borderColor = 'var(--green)';
+      lbl.style.color       = 'var(--text)';
+    } else {
+      name.textContent      = 'Seleccionar archivo .csv o .xlsx';
+      lbl.style.borderColor = '';
+      lbl.style.color       = '';
+    }
+  };
+
+  // Busca valor em row independente do case da chave
+  function getCol(row, ...keys) {
+    for (const k of Object.keys(row)) {
+      if (keys.some(c => c.toLowerCase() === k.toLowerCase()))
+        return (row[k] || '').toString().trim();
+    }
+    return '';
+  }
+
+  window.previewImport = function() {
+    const fileInput = document.getElementById('import-file');
+    const file = fileInput.files[0];
+    if (!file) { toast('⚠ Seleccioná un archivo primero'); return; }
+    const ext    = file.name.split('.').pop().toLowerCase();
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        let wb;
+        if (ext === 'csv') {
+          wb = XLSX.read(e.target.result, { type: 'string' });
+        } else {
+          wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        }
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        processImportRows(rows);
+      } catch(err) {
+        toast('✕ Error al leer el archivo');
+        console.error('import error:', err);
+      }
+    };
+    if (ext === 'csv') reader.readAsText(file, 'UTF-8');
+    else               reader.readAsArrayBuffer(file);
+  };
+
+  function processImportRows(rows) {
+    const teams = {};
+    rows.forEach(row => {
+      const name   = getCol(row,'EQUIPO','equipo','team','nombre_equipo').toUpperCase();
+      const cat    = getCol(row,'CATEGORIA','categoria','category','cat').toLowerCase();
+      const player = getCol(row,'JUGADOR','jugador','player','nombre','nome','jugadores');
+      if (!name || !cat) return;
+      const key = `${name}|||${cat}`;
+      if (!teams[key]) teams[key] = { name, cat, players: [] };
+      if (player) teams[key].players.push(player);
+    });
+
+    pendingImport = Object.values(teams);
+    if (!pendingImport.length) {
+      toast('⚠ No se encontraron equipos válidos. Verificá las columnas del archivo.');
+      return;
+    }
+
+    const preview = document.getElementById('import-preview');
+    preview.style.display = 'block';
+
+    let html = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px">
+      ${pendingImport.length} equipo(s) encontrado(s) en el archivo:</div>`;
+
+    let newCount = 0;
+    pendingImport.forEach(t => {
+      const catLbl  = CAT_LABELS[t.cat] || t.cat;
+      const exists  = Object.values(window._teams[t.cat] || {}).some(x => x.name === t.name);
+      if (!exists) newCount++;
+      const preview3 = t.players.slice(0,3).join(', ') + (t.players.length > 3 ? ` +${t.players.length - 3} más` : '');
+      html += `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid ${exists ? 'rgba(255,23,68,0.3)' : 'var(--border)'};border-radius:8px;margin-bottom:4px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;flex-wrap:wrap;gap:6px">
+          <span style="font-weight:700;text-transform:uppercase;color:${exists ? 'var(--red)' : 'var(--text)'}">${t.name}</span>
+          <span class="team-card-cat">${catLbl}</span>
+          <span style="color:var(--muted);font-size:0.72rem">${t.players.length} jugador(es)${preview3 ? ': ' + preview3 : ''}</span>
+          ${exists ? `<span style="margin-left:auto;color:var(--red);font-size:0.66rem;letter-spacing:1px">YA EXISTE · SE OMITIRÁ</span>` : ''}
+        </div>`;
+    });
+
+    html += `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="cancelImport()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmImport()" ${!newCount ? 'disabled' : ''}>
+        ✓ Confirmar (${newCount} nuevo${newCount !== 1 ? 's' : ''})
+      </button>
+    </div>`;
+    preview.innerHTML = html;
+  }
+
+  window.confirmImport = async function() {
+    if (!pendingImport.length) return;
+    let success = 0, skipped = 0;
+    for (const t of pendingImport) {
+      const exists = Object.values(window._teams[t.cat] || {}).some(x => x.name === t.name);
+      if (exists) { skipped++; continue; }
+      try {
+        await push(ref(db, `matches/__teams__/${t.cat}`), { name: t.name, players: t.players, category: t.cat });
+        success++;
+      } catch(e) {
+        toast(`✕ Error guardando ${t.name}: ${e.message}`);
+      }
+    }
+    pendingImport = [];
+    document.getElementById('import-preview').style.display = 'none';
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-filename').textContent = 'Seleccionar archivo .csv o .xlsx';
+    const lbl = document.getElementById('import-label');
+    if (lbl) { lbl.style.borderColor = ''; lbl.style.color = ''; }
+    toast(`✓ ${success} equipo(s) importado(s)${skipped ? ` · ${skipped} omitido(s)` : ''}`);
+  };
+
+  window.cancelImport = function() {
+    pendingImport = [];
+    document.getElementById('import-preview').style.display = 'none';
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-filename').textContent = 'Seleccionar archivo .csv o .xlsx';
+    const lbl = document.getElementById('import-label');
+    if (lbl) { lbl.style.borderColor = ''; lbl.style.color = ''; }
+  };
 </script>
 </body>
 </html>

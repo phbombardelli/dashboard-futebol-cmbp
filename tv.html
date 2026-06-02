@@ -656,7 +656,7 @@
 
 <!-- ── LIVE TICKER ── -->
 <div id="live-ticker">
-  <div class="ticker-label">AO VIVO</div>
+  <div class="ticker-label">EN VIVO</div>
   <div class="ticker-track">
     <span class="ticker-inner" id="ticker-inner">Torneo de Fútbol CMBP &nbsp;·&nbsp; Resultado en directo</span>
   </div>
@@ -865,7 +865,7 @@ function buildGoleadores() {
       });
     });
 
-    const list = Object.values(scorers).sort((a,b) => b.count-a.count).slice(0,10);
+    const list = Object.values(scorers).sort((a,b) => b.count-a.count).slice(0,7);
 
     html += `
       <div class="gol-col">
