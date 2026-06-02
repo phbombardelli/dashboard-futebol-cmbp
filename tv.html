@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torneo de Fútbol CMBP · TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── VARIABLES & RESET ── */
+  :root {
+    --green:#00c853; --green-dim:#009624; --green-faint:rgba(0,200,83,0.08);
+    --yellow:#ffd600; --yellow-dim:#c7a500; --yellow-faint:rgba(255,214,0,0.08);
+    --red:#ff1744;    --red-faint:rgba(255,23,68,0.12);
+    --blue:#40c4ff;
+    --bg:#060a07;     --surface:#0d1510; --surface2:#131c15; --surface3:#182219;
+    --border:rgba(0,200,83,0.12); --border2:rgba(0,200,83,0.28);
+    --border-y:rgba(255,214,0,0.18);
+    --text:#edf5ee; --muted:#4e6e52; --muted2:#3a5440;
+    --radius:10px;
+    --slide-dur: 20s;   /* time each slide is shown */
+  }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    width:100%; height:100%;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Barlow Condensed', sans-serif;
+  }
+
+  /* ── BACKGROUND TEXTURE ── */
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% -5%, rgba(0,200,83,0.07) 0%, transparent 65%),
+      repeating-linear-gradient(0deg,  transparent, transparent 59px, rgba(0,200,83,0.022) 59px, rgba(0,200,83,0.022) 60px),
+      repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(0,200,83,0.022) 59px, rgba(0,200,83,0.022) 60px);
+  }
+
+  /* ── HEADER ── */
+  #tv-header {
+    position: relative; z-index: 10;
+    height: 68px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2.5rem;
+    border-bottom: 1px solid var(--border-y);
+    background: rgba(6,10,7,0.96);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+  }
+  .hdr-logo {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 2rem; letter-spacing: 4px; color: var(--yellow);
+  }
+  .hdr-logo span {
+    color: var(--muted); font-size: 1rem; letter-spacing: 3px;
+    margin-left: 14px; vertical-align: middle;
+  }
+  .hdr-slide-name {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 1.9rem; letter-spacing: 5px;
+    color: var(--green);
+    text-shadow: 0 0 30px rgba(0,200,83,0.35);
+    transition: opacity 0.4s;
+  }
+  .hdr-dots {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hdr-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--muted2);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .hdr-dot.active {
+    background: var(--yellow);
+    transform: scale(1.35);
+    box-shadow: 0 0 10px rgba(255,214,0,0.5);
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar {
+    position: relative; z-index: 10;
+    height: 3px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--yellow));
+    width: 0%;
+    transition: width 0.25s linear;
+  }
+
+  /* ── MAIN STAGE ── */
+  #stage {
+    position: relative; z-index: 1;
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* body is flex column */
+  body { display: flex; flex-direction: column; }
+
+  /* ── SLIDES ── */
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 1.6rem 2.5rem 1.4rem;
+    gap: 1rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+  .slide.fade-out { opacity: 0; }
+
+  /* ── SLIDE TITLE ── */
+  .slide-title {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 1.35rem; letter-spacing: 6px; color: var(--yellow);
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .slide-title::after {
+    content:''; flex:1; height:1px;
+    background: linear-gradient(90deg, var(--border-y), transparent);
+  }
+
+  /* ══════════════════════════════
+     BRACKET LAYOUT
+  ══════════════════════════════ */
+  .bracket-wrap {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* Column */
+  .bracket-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    position: relative;
+  }
+
+  .bracket-col-header {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 0.88rem; letter-spacing: 4px;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.55rem;
+    flex-shrink: 0;
+  }
+  .bracket-col-header.col-semi   { color: var(--blue);   border-bottom-color:rgba(64,196,255,0.25); }
+  .bracket-col-header.col-final  { color: var(--yellow); border-bottom-color:rgba(255,214,0,0.3);  }
+
+  .bracket-col-matches {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    gap: 0.55rem;
+    min-height: 0;
+  }
+
+  /* Connector lines between columns */
+  .bracket-connector {
+    width: 36px;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    padding-top: 2.2rem; /* align with col matches area (after header) */
+  }
+  .connector-pair {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+  .connector-pair::before {
+    content:'';
+    position:absolute; right:0; top:25%; bottom:25%;
+    width:1px;
+    background: linear-gradient(180deg, transparent, var(--border2), transparent);
+  }
+  .connector-pair::after {
+    content:'';
+    position:absolute; right:0; top:50%;
+    width:18px; height:1px;
+    background: var(--border2);
+    transform: translateX(50%);
+  }
+
+  /* ── MATCH CARD ── */
+  .bk-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: border-color 0.3s;
+  }
+  .bk-card.live   { border-color: var(--red);    box-shadow: 0 0 14px rgba(255,23,68,0.18); }
+  .bk-card.finished { border-color: var(--border2); }
+  .bk-card.empty  { border-style:dashed; border-color: var(--border); background: transparent; opacity:0.5; }
+
+  .bk-phase-bar {
+    height: 3px;
+    background: var(--border);
+  }
+  .bk-card.live    .bk-phase-bar { background: var(--red); }
+  .bk-card.finished .bk-phase-bar { background: linear-gradient(90deg, var(--green), var(--green-dim)); }
+
+  .bk-body {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 4px;
+    padding: 0.5rem 0.7rem;
+  }
+
+  .bk-team {
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .bk-team.right { text-align: right; align-items: flex-end; }
+
+  .bk-team-name {
+    font-family:'Barlow Condensed', sans-serif;
+    font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
+    line-height: 1.15; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 14ch;
+  }
+  .bk-team-name.winner { color: var(--yellow); }
+  .bk-team-name.tbd    { color: var(--muted); font-style:italic; font-weight:400; font-size:0.78rem; }
+
+  .bk-team-goals {
+    font-family:'Barlow Condensed', sans-serif;
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 0.3px;
+    line-height: 1.3; white-space: pre-line;
+  }
+
+  .bk-score-block {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    min-width: 72px;
+  }
+  .bk-score-row {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .bk-score {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 1.9rem; min-width: 1ch; text-align: center;
+    line-height: 1;
+  }
+  .bk-score.winner { color: var(--yellow); }
+  .bk-sep {
+    font-family:'Bebas Neue', sans-serif;
+    font-size: 1.2rem; color: var(--muted);
+  }
+  .bk-pen {
+    font-family:'Barlow Condensed', sans-serif;
+    font-size: 0.65rem; color: var(--yellow);
+    background: rgba(255,214,0,0.1);
+    border: 1px solid rgba(255,214,0,0.22);
+    border-radius: 4px; padding: 1px 6px;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+  }
+  .bk-status {
+    font-family:'Barlow Condensed', sans-serif;
+    font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .bk-status.live    { color: var(--red);   animation: blink 1.2s step-end infinite; }
+  .bk-status.pending { color: var(--muted); }
+  .bk-status.done    { color: var(--green); }
+
+  .bk-time {
+    font-family:'Barlow Condensed', sans-serif;
+    font-size: 0.6rem; color: var(--muted); letter-spacing: 1px;
+    margin-bottom: 1px;
+  }
+
+  .bk-card-empty-inner {
+    padding: 0.8rem 0.7rem;
+    text-align: center;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.75rem; color:var(--muted); letter-spacing:1.5px;
+  }
+
+  @keyframes blink {
+    0%,100%{opacity:1} 50%{opacity:0.35}
+  }
+
+  /* Crown for winner */
+  .bk-crown {
+    font-size: 0.7rem; line-height: 1;
+  }
+
+  /* FINAL column: Final on top, 3er lugar below, separated */
+  .bracket-col-final-matches {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-height: 0;
+  }
+  .bk-final-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .bk-final-label {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:0.75rem; letter-spacing:3px; color:var(--yellow);
+    text-align:center; margin-bottom:2px;
+  }
+  .bk-tercero-label {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:0.75rem; letter-spacing:3px; color:var(--muted);
+    text-align:center; margin-bottom:2px;
+  }
+  .bk-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0.35rem 0;
+    flex-shrink:0;
+  }
+
+  /* ══════════════════════════════
+     GOLEADORES SLIDE
+  ══════════════════════════════ */
+  .gol-wrap {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    min-height: 0;
+  }
+
+  .gol-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .gol-col-hdr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 1.15rem; letter-spacing: 4px; color: var(--yellow);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .gol-col-hdr .cat-badge {
+    margin-left: auto;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.62rem; letter-spacing:2px; color:var(--muted);
+    background:var(--green-faint);
+    border:1px solid var(--border);
+    border-radius:12px; padding:2px 8px;
+  }
+
+  .gol-list {
+    flex:1; overflow:hidden;
+    padding: 0.5rem 0;
+  }
+
+  .gol-row {
+    display: grid;
+    grid-template-columns: 2rem 1fr 2.5rem;
+    align-items: center;
+    padding: 0.42rem 1rem;
+    gap: 8px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(0,200,83,0.05);
+  }
+  .gol-row:last-child { border-bottom: none; }
+
+  .gol-rank {
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 1.1rem; color: var(--muted);
+    text-align: center; line-height: 1;
+  }
+  .gol-row:nth-child(1) .gol-rank { color: var(--yellow); font-size:1.25rem; }
+  .gol-row:nth-child(2) .gol-rank { color: #b0b0b0; }
+  .gol-row:nth-child(3) .gol-rank { color: #cd7f32; }
+
+  .gol-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .gol-name {
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:700; font-size:0.9rem; letter-spacing:0.3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    color:var(--text);
+  }
+  .gol-team {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.65rem; color:var(--muted); letter-spacing:0.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .gol-count {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.7rem; color:var(--green);
+    text-align:right; line-height:1;
+  }
+  .gol-count-unit {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.6rem; color:var(--muted); letter-spacing:1px;
+    text-align:right; line-height:1;
+  }
+
+  .gol-empty {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.78rem; color:var(--muted); letter-spacing:2px;
+    text-transform:uppercase; padding:1.5rem;
+    text-align:center;
+  }
+
+  /* ── LIVE TICKER (bottom strip) ── */
+  #live-ticker {
+    position: relative; z-index: 10;
+    height: 34px; flex-shrink: 0;
+    background: rgba(6,10,7,0.97);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center;
+    overflow: hidden;
+  }
+  .ticker-label {
+    flex-shrink: 0;
+    background: var(--red);
+    color: #fff;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:0.82rem; letter-spacing:3px;
+    padding: 0 14px;
+    height: 100%; display:flex; align-items:center;
+    margin-right: 10px;
+  }
+  .ticker-track {
+    flex:1; overflow:hidden;
+    position:relative;
+    white-space:nowrap;
+  }
+  .ticker-inner {
+    display:inline-block;
+    animation: ticker-scroll 30s linear infinite;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.78rem; letter-spacing:1.5px;
+    color: var(--text);
+  }
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+
+  /* ── CLOCK ── */
+  #clock {
+    flex-shrink:0;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.05rem; letter-spacing:3px; color:var(--muted);
+    padding: 0 18px;
+  }
+
+  /* ── NO DATA placeholder ── */
+  .no-data {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:0.5rem;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.8rem; letter-spacing:6px; color:var(--muted2);
+    text-align:center;
+  }
+  .no-data p {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.75rem; letter-spacing:3px; color:var(--muted2);
+    text-transform:uppercase;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header id="tv-header">
+  <div class="hdr-logo">
+    <img src="https://drive.google.com/thumbnail?id=1z7YF_c_1SWRJfv16VcnVUGGXmUxUCyrZ&sz=w80"
+         alt="CMBP" style="width:40px;height:40px;object-fit:contain;margin-right:10px;vertical-align:middle;filter:drop-shadow(0 0 6px rgba(255,214,0,0.3));">
+    Torneo de Fútbol CMBP
+    <span>· TV</span>
+  </div>
+  <div class="hdr-slide-name" id="hdr-slide-name">Oficiales</div>
+  <div class="hdr-dots">
+    <div class="hdr-dot active" id="dot-0"></div>
+    <div class="hdr-dot"        id="dot-1"></div>
+    <div class="hdr-dot"        id="dot-2"></div>
+    <div class="hdr-dot"        id="dot-3"></div>
+  </div>
+</header>
+
+<!-- ── PROGRESS BAR ── -->
+<div id="progress-bar"><div id="progress-fill"></div></div>
+
+<!-- ── STAGE ── -->
+<div id="stage">
+
+  <!-- SLIDE 0: Oficiales -->
+  <div class="slide active" id="slide-0">
+    <div class="slide-title">⚽ Oficiales — Chaveamento</div>
+    <div class="bracket-wrap" id="bracket-oficiales"></div>
+  </div>
+
+  <!-- SLIDE 1: Femenino -->
+  <div class="slide" id="slide-1">
+    <div class="slide-title">⚽ Femenino — Chaveamento</div>
+    <div class="bracket-wrap" id="bracket-femenino"></div>
+  </div>
+
+  <!-- SLIDE 2: Suboficiales -->
+  <div class="slide" id="slide-2">
+    <div class="slide-title">⚽ Suboficiales — Chaveamento</div>
+    <div class="bracket-wrap" id="bracket-suboficiales"></div>
+  </div>
+
+  <!-- SLIDE 3: Goleadores -->
+  <div class="slide" id="slide-3">
+    <div class="slide-title">🏅 Goleadores</div>
+    <div class="gol-wrap" id="gol-wrap"></div>
+  </div>
+
+</div>
+
+<!-- ── LIVE TICKER ── -->
+<div id="live-ticker">
+  <div class="ticker-label">AO VIVO</div>
+  <div class="ticker-track">
+    <span class="ticker-inner" id="ticker-inner">Torneo de Fútbol CMBP &nbsp;·&nbsp; Resultado en directo</span>
+  </div>
+  <div id="clock">--:--</div>
+</div>
+
+
+<!-- ══════════ FIREBASE + LOGIC ══════════ -->
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ── Config ── */
+const firebaseConfig = {
+  apiKey:            "AIzaSyBftlXjMHDtZ8-PSQkdUCADDAu6Xn39yFE",
+  authDomain:        "torneo-cmbp.firebaseapp.com",
+  databaseURL:       "https://torneo-cmbp-default-rtdb.firebaseio.com",
+  projectId:         "torneo-cmbp",
+  storageBucket:     "torneo-cmbp.firebasestorage.app",
+  messagingSenderId: "125647418490",
+  appId:             "1:125647418490:web:136598ddfb2b04cb0c37c3"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+/* ── Constants ── */
+const CATEGORIES  = ['oficiales','femenino','suboficiales'];
+const CAT_LABELS  = { oficiales:'Oficiales', femenino:'Femenino', suboficiales:'Suboficiales' };
+const SLIDE_NAMES = ['Oficiales','Femenino','Suboficiales','Goleadores'];
+const SLIDE_DURATION_MS = 20000;   // 20 s per slide
+
+/* ── State ── */
+const allMatches = { oficiales:{}, femenino:{}, suboficiales:{} };
+let currentSlide = 0;
+let progressStart = Date.now();
+let progressRaf;
+let slideTimeout;
+
+/* ── Helpers ── */
+function toArr(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val : Object.values(val);
+}
+
+function getWinner(m) {
+  if (m.status !== 'finished') return null;
+  if (m.penalty) return Number(m.pen1) > Number(m.pen2) ? m.team1 : m.team2;
+  if (Number(m.score1) > Number(m.score2)) return m.team1;
+  if (Number(m.score2) > Number(m.score1)) return m.team2;
+  return null;
+}
+
+function compactGoals(text) {
+  if (!text) return '';
+  const counts = {}, order = [];
+  text.split('\n').forEach(raw => {
+    const n = raw.trim(); if (!n) return;
+    if (!counts[n]) { counts[n]=0; order.push(n); }
+    counts[n]++;
+  });
+  return order.map(n => counts[n]>1 ? `${n} (${counts[n]})` : n).join('\n');
+}
+
+/* ── Match card builder ── */
+function matchCard(m, isWideCol) {
+  if (!m) {
+    return `<div class="bk-card empty"><div class="bk-card-empty-inner">A definir</div></div>`;
+  }
+  const s1 = Number(m.score1)||0;
+  const s2 = Number(m.score2)||0;
+  const w = getWinner(m);
+  const w1 = w === m.team1;
+  const w2 = w === m.team2;
+
+  const t1 = m.team1 || 'Por definir';
+  const t2 = m.team2 || 'Por definir';
+  const isTbd1 = !m.team1;
+  const isTbd2 = !m.team2;
+
+  let statusHtml = '';
+  if (m.status === 'live')     statusHtml = `<div class="bk-status live">● En vivo</div>`;
+  else if (m.status === 'finished') statusHtml = `<div class="bk-status done">Finalizado</div>`;
+  else                              statusHtml = m.time ? `<div class="bk-time">${m.time}</div>` : `<div class="bk-status pending">Por jugar</div>`;
+
+  const penHtml = (m.penalty && m.status==='finished')
+    ? `<div class="bk-pen">${m.pen1} × ${m.pen2} pen.</div>` : '';
+
+  const goals1c = compactGoals(m.goals1||'');
+  const goals2c = compactGoals(m.goals2||'');
+  const goalsHtml1 = goals1c ? `<div class="bk-team-goals">${goals1c}</div>` : '';
+  const goalsHtml2 = goals2c ? `<div class="bk-team-goals">${goals2c}</div>` : '';
+
+  return `
+    <div class="bk-card ${m.status||'pending'}">
+      <div class="bk-phase-bar"></div>
+      <div class="bk-body">
+        <div class="bk-team">
+          <div class="bk-team-name ${w1?'winner':''} ${isTbd1?'tbd':''}">${w1?'👑 ':''}${t1}</div>
+          ${goalsHtml1}
+        </div>
+        <div class="bk-score-block">
+          ${statusHtml}
+          <div class="bk-score-row">
+            <div class="bk-score ${w1?'winner':''}">${m.status!=='pending'?s1:'—'}</div>
+            <div class="bk-sep">×</div>
+            <div class="bk-score ${w2?'winner':''}">${m.status!=='pending'?s2:'—'}</div>
+          </div>
+          ${penHtml}
+        </div>
+        <div class="bk-team right">
+          <div class="bk-team-name ${w2?'winner':''} ${isTbd2?'tbd':''}">${w2?'👑 ':''}${t2}</div>
+          ${goalsHtml2}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Bracket builder ── */
+function buildBracket(cat) {
+  const el = document.getElementById(`bracket-${cat}`);
+  if (!el) return;
+
+  const matches = allMatches[cat] || {};
+  const list    = Object.values(matches).sort((a,b) => (a.order||0)-(b.order||0));
+
+  const cuartos  = list.filter(m => m.phase === 'cuartos');
+  const semis    = list.filter(m => m.phase === 'semi');
+  const finalM   = list.find(m  => m.phase === 'final');
+  const terceroM = list.find(m  => m.phase === 'tercero');
+
+  // Ensure we always show at least 2 slots for cuartos / 2 for semis
+  while (cuartos.length  < 4) cuartos.push(null);
+  while (semis.length    < 2) semis.push(null);
+
+  /* ---------- Cuartos column ---------- */
+  let cuartosHtml = '';
+  cuartos.forEach(m => { cuartosHtml += matchCard(m); });
+
+  /* ---------- Semi column ---------- */
+  let semisHtml = '';
+  semis.forEach(m => { semisHtml += matchCard(m); });
+
+  /* ---------- Final column ---------- */
+  const finalHtml   = matchCard(finalM || null);
+  const terceroHtml = matchCard(terceroM || null);
+
+  el.innerHTML = `
+    <!-- Cuartos -->
+    <div class="bracket-col">
+      <div class="bracket-col-header">Cuartos de Final</div>
+      <div class="bracket-col-matches">${cuartosHtml}</div>
+    </div>
+
+    <!-- Connector cuartos→semi -->
+    <div class="bracket-connector">
+      <div class="connector-pair"></div>
+      <div class="connector-pair"></div>
+    </div>
+
+    <!-- Semi -->
+    <div class="bracket-col">
+      <div class="bracket-col-header col-semi">Semifinal</div>
+      <div class="bracket-col-matches">${semisHtml}</div>
+    </div>
+
+    <!-- Connector semi→final -->
+    <div class="bracket-connector">
+      <div class="connector-pair"></div>
+    </div>
+
+    <!-- Final + 3er lugar -->
+    <div class="bracket-col">
+      <div class="bracket-col-header col-final">Final &amp; 3.º Lugar</div>
+      <div class="bracket-col-final-matches">
+        <div class="bk-final-group">
+          <div class="bk-final-label">🏆 Final</div>
+          ${finalHtml}
+        </div>
+        <div class="bk-divider"></div>
+        <div class="bk-final-group">
+          <div class="bk-tercero-label">🥉 3.º Lugar</div>
+          ${terceroHtml}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Goleadores builder ── */
+function buildGoleadores() {
+  const el = document.getElementById('gol-wrap');
+  if (!el) return;
+  let html = '';
+
+  CATEGORIES.forEach(cat => {
+    const scorers = {};
+    Object.values(allMatches[cat]||{}).forEach(m => {
+      toArr(m.goalsData).forEach(g => {
+        if (g.ownGoal) return;
+        const key = (g.player||'').trim();
+        if (!key) return;
+        if (!scorers[key]) scorers[key] = { name:key, team:'', count:0 };
+        scorers[key].count++;
+        if (!scorers[key].team && g.teamSlot) {
+          scorers[key].team = g.teamSlot === '1' ? (m.team1||'') : (m.team2||'');
+        }
+      });
+    });
+
+    const list = Object.values(scorers).sort((a,b) => b.count-a.count).slice(0,10);
+
+    html += `
+      <div class="gol-col">
+        <div class="gol-col-hdr">
+          ⚽ Goleadores
+          <span class="cat-badge">${CAT_LABELS[cat]}</span>
+        </div>`;
+
+    if (!list.length) {
+      html += `<div class="gol-empty">Sin goles registrados</div>`;
+    } else {
+      html += `<div class="gol-list">`;
+      list.forEach((s,i) => {
+        html += `
+          <div class="gol-row">
+            <div class="gol-rank">${i+1}</div>
+            <div class="gol-info">
+              <div class="gol-name">${s.name}</div>
+              <div class="gol-team">${s.team}</div>
+            </div>
+            <div>
+              <div class="gol-count">${s.count}</div>
+              <div class="gol-count-unit">gol${s.count!==1?'es':''}</div>
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+/* ── Ticker builder ── */
+function buildTicker() {
+  const parts = [];
+  CATEGORIES.forEach(cat => {
+    const liveMatches = Object.values(allMatches[cat]||{}).filter(m=>m.status==='live');
+    liveMatches.forEach(m => {
+      const s1 = Number(m.score1)||0, s2 = Number(m.score2)||0;
+      parts.push(`${CAT_LABELS[cat]}: ${m.team1||'?'} ${s1} × ${s2} ${m.team2||'?'} ● EN VIVO`);
+    });
+    const finishedM = Object.values(allMatches[cat]||{}).filter(m=>m.status==='finished');
+    finishedM.forEach(m => {
+      const s1=Number(m.score1)||0, s2=Number(m.score2)||0;
+      const pen = m.penalty ? ` (pen. ${m.pen1}×${m.pen2})` : '';
+      parts.push(`${CAT_LABELS[cat]}: ${m.team1||'?'} ${s1} × ${s2} ${m.team2||'?'}${pen}`);
+    });
+  });
+
+  const ticker = document.getElementById('ticker-inner');
+  if (!ticker) return;
+  if (parts.length) {
+    ticker.textContent = parts.join('   ·   ');
+  } else {
+    ticker.textContent = 'Torneo de Fútbol CMBP  ·  Resultados en directo';
+  }
+  // Recalculate animation duration based on text length
+  const len = ticker.textContent.length;
+  const dur = Math.max(18, Math.min(60, len * 0.22));
+  ticker.style.animationDuration = dur + 's';
+}
+
+/* ── Render all ── */
+function renderAll() {
+  CATEGORIES.forEach(cat => buildBracket(cat));
+  buildGoleadores();
+  buildTicker();
+}
+
+/* ── Firebase subscriptions ── */
+CATEGORIES.forEach(cat => {
+  onValue(ref(db, `matches/${cat}`), snap => {
+    allMatches[cat] = snap.val() || {};
+    buildBracket(cat);
+    buildGoleadores();
+    buildTicker();
+  });
+});
+
+/* ══════════════════════
+   CAROUSEL LOGIC
+══════════════════════ */
+function goToSlide(idx) {
+  const total = 4;
+  const prev = currentSlide;
+  currentSlide = ((idx % total) + total) % total;
+
+  // Swap display
+  document.getElementById(`slide-${prev}`).classList.remove('active');
+  document.getElementById(`slide-${currentSlide}`).classList.add('active');
+
+  // Update dots
+  document.querySelectorAll('.hdr-dot').forEach((d,i) => d.classList.toggle('active', i===currentSlide));
+
+  // Update header name
+  document.getElementById('hdr-slide-name').textContent = SLIDE_NAMES[currentSlide];
+
+  // Restart progress
+  progressStart = Date.now();
+  clearTimeout(slideTimeout);
+  startProgress();
+  scheduleNext();
+}
+
+function scheduleNext() {
+  clearTimeout(slideTimeout);
+  slideTimeout = setTimeout(() => goToSlide(currentSlide + 1), SLIDE_DURATION_MS);
+}
+
+function startProgress() {
+  cancelAnimationFrame(progressRaf);
+  const fill = document.getElementById('progress-fill');
+  function tick() {
+    const elapsed = Date.now() - progressStart;
+    const pct = Math.min(100, (elapsed / SLIDE_DURATION_MS) * 100);
+    fill.style.width = pct + '%';
+    if (pct < 100) progressRaf = requestAnimationFrame(tick);
+  }
+  progressRaf = requestAnimationFrame(tick);
+}
+
+/* ── Clock ── */
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = `${hh}:${mm}`;
+}
+updateClock();
+setInterval(updateClock, 5000);
+
+/* ── Boot ── */
+renderAll();
+scheduleNext();
+startProgress();
+</script>
+</body>
+</html>
