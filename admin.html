@@ -1106,24 +1106,47 @@ window.exportTxt = function() {
     if (!file) { toast('⚠ Seleccioná un archivo primero'); return; }
     const ext    = file.name.split('.').pop().toLowerCase();
     const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        let wb;
-        if (ext === 'csv') {
-          wb = XLSX.read(e.target.result, { type: 'string' });
-        } else {
-          wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-        }
-        const ws   = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        processImportRows(rows);
-      } catch(err) {
-        toast('✕ Error al leer el archivo');
-        console.error('import error:', err);
-      }
-    };
-    if (ext === 'csv') reader.readAsText(file, 'UTF-8');
-    else               reader.readAsArrayBuffer(file);
+
+    if (ext === 'csv') {
+      // CSV: lê como texto UTF-8 e parseia manualmente — evita corrupção de encoding pelo SheetJS
+      reader.readAsText(file, 'UTF-8');
+      reader.onload = function(e) {
+        try {
+          // Remove BOM se existir
+          let text = e.target.result.replace(/^﻿/, '');
+          const lines = text.split(/\r?\n/);
+          const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+          const rows = [];
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            // Suporta campos entre aspas com vírgulas internas
+            const vals = [];
+            let cur = '', inQ = false;
+            for (const ch of line + ',') {
+              if (ch === '"') { inQ = !inQ; }
+              else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+              else cur += ch;
+            }
+            const obj = {};
+            headers.forEach((h, j) => obj[h] = vals[j] || '');
+            rows.push(obj);
+          }
+          processImportRows(rows);
+        } catch(err) { toast('✕ Error al leer CSV'); console.error(err); }
+      };
+    } else {
+      // XLSX/XLS: SheetJS com leitura binária
+      reader.readAsArrayBuffer(file);
+      reader.onload = function(e) {
+        try {
+          const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const ws   = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          processImportRows(rows);
+        } catch(err) { toast('✕ Error al leer XLSX'); console.error(err); }
+      };
+    }
   };
 
   function processImportRows(rows) {
