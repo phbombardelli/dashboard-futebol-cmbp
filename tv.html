@@ -242,8 +242,8 @@
     font-family:'Barlow Condensed', sans-serif;
     font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
     line-height: 1.15; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 14ch;
+    white-space: nowrap; overflow: hidden;
+    min-width: 0;
   }
   .bk-team-name.winner { color: var(--yellow); }
   .bk-team-name.tbd    { color: var(--muted); font-style:italic; font-weight:400; font-size:0.78rem; }
@@ -479,6 +479,110 @@
     padding: 0 18px;
   }
 
+  /* ══════════════════════════════
+     EVENT POPUP
+  ══════════════════════════════ */
+  #tv-popup-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+  }
+  #tv-popup-overlay.show { opacity: 1; }
+
+  #tv-popup {
+    position: relative;
+    background: linear-gradient(145deg, #0d1510 0%, #182219 100%);
+    border: 2px solid var(--yellow);
+    border-radius: 20px;
+    padding: 2.2rem 3rem 2.5rem;
+    min-width: 480px; max-width: 620px;
+    text-align: center;
+    box-shadow:
+      0 0 70px rgba(255,214,0,0.22),
+      0 0 140px rgba(255,214,0,0.07),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+    animation: popup-bounce 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  #tv-popup.popup-goal     { border-color:var(--green); box-shadow:0 0 70px rgba(0,200,83,0.28),0 0 140px rgba(0,200,83,0.08); }
+  #tv-popup.popup-live     { border-color:var(--green); box-shadow:0 0 70px rgba(0,200,83,0.28),0 0 140px rgba(0,200,83,0.08); }
+  #tv-popup.popup-finished { border-color:#40c4ff;      box-shadow:0 0 70px rgba(64,196,255,0.25),0 0 140px rgba(64,196,255,0.07); }
+
+  @keyframes popup-bounce {
+    from { transform: scale(0.82) translateY(24px); opacity: 0; }
+    to   { transform: scale(1)    translateY(0);    opacity: 1; }
+  }
+
+  .popup-icon    { font-size:3.6rem; line-height:1; margin-bottom:0.4rem; }
+  .popup-eyebrow {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.75rem; letter-spacing:5px; color:var(--muted);
+    text-transform:uppercase; margin-bottom:0.25rem;
+  }
+  .popup-headline {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:3.8rem; letter-spacing:6px; color:var(--yellow); line-height:1;
+  }
+  #tv-popup.popup-goal     .popup-headline { color:var(--green); text-shadow:0 0 30px rgba(0,200,83,0.5); }
+  #tv-popup.popup-live     .popup-headline { color:var(--green); }
+  #tv-popup.popup-finished .popup-headline { color:#40c4ff; }
+
+  .popup-scorer {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:2rem; font-weight:700; letter-spacing:2px;
+    color:var(--text); margin-top:0.55rem;
+    text-transform:uppercase;
+  }
+  .popup-team-tag {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.8rem; letter-spacing:2.5px; color:var(--green);
+    text-transform:uppercase; margin-top:2px;
+  }
+  .popup-vs {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.95rem; letter-spacing:2px; color:var(--muted);
+    text-transform:uppercase; margin-top:0.5rem;
+  }
+  .popup-big-score {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:4.5rem; letter-spacing:10px; color:var(--yellow); line-height:1;
+    margin:0.4rem 0;
+  }
+  .popup-match-teams {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:1.3rem; font-weight:700; letter-spacing:1.5px;
+    color:var(--text); text-transform:uppercase; margin-top:0.3rem;
+  }
+  .popup-sub {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.78rem; letter-spacing:2px; color:var(--muted);
+    text-transform:uppercase; margin-top:0.3rem;
+  }
+  .popup-winner-tag {
+    display:inline-block;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.85rem; letter-spacing:2.5px;
+    color:#000; background:var(--yellow);
+    border-radius:20px; padding:3px 14px; margin-top:0.6rem;
+    text-transform:uppercase;
+  }
+  .popup-progress {
+    position:absolute; bottom:0; left:0; right:0; height:5px;
+    background:rgba(255,255,255,0.08);
+    border-radius:0 0 18px 18px; overflow:hidden;
+  }
+  .popup-progress-fill {
+    height:100%; width:100%;
+    background: var(--yellow);
+    border-radius:0 0 18px 18px;
+  }
+  #tv-popup.popup-goal     .popup-progress-fill { background:var(--green); }
+  #tv-popup.popup-live     .popup-progress-fill { background:var(--green); }
+  #tv-popup.popup-finished .popup-progress-fill { background:#40c4ff; }
+
   /* ── NO DATA placeholder ── */
   .no-data {
     flex:1; display:flex; align-items:center; justify-content:center;
@@ -543,6 +647,11 @@
     <div class="gol-wrap" id="gol-wrap"></div>
   </div>
 
+</div>
+
+<!-- ── EVENT POPUP ── -->
+<div id="tv-popup-overlay">
+  <div id="tv-popup"></div>
 </div>
 
 <!-- ── LIVE TICKER ── -->
@@ -821,6 +930,19 @@ function buildTicker() {
   ticker.style.animationDuration = dur + 's';
 }
 
+/* ── Auto-fit long team names ── */
+function fitTeamNames() {
+  document.querySelectorAll('.bk-team-name:not(.tbd)').forEach(el => {
+    el.style.fontSize = '';
+    if (el.scrollWidth <= el.offsetWidth) return;
+    let size = parseFloat(window.getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.offsetWidth + 1 && size > 7) {
+      size -= 0.5;
+      el.style.fontSize = size + 'px';
+    }
+  });
+}
+
 /* ── Render all ── */
 function renderAll() {
   CATEGORIES.forEach(cat => buildBracket(cat));
@@ -828,11 +950,138 @@ function renderAll() {
   buildTicker();
 }
 
+/* ══════════════════════
+   EVENT POPUP SYSTEM
+══════════════════════ */
+const POPUP_DURATION_MS = 5000;
+const popupQueue = [];
+let popupActive  = false;
+
+function queuePopup(data) {
+  popupQueue.push(data);
+  if (!popupActive) showNextPopup();
+}
+
+function showNextPopup() {
+  if (!popupQueue.length) { popupActive = false; return; }
+  popupActive = true;
+  const data    = popupQueue.shift();
+  const overlay = document.getElementById('tv-popup-overlay');
+  const popup   = document.getElementById('tv-popup');
+
+  popup.className = `popup-${data.type}`;
+
+  let inner = '';
+
+  if (data.type === 'goal') {
+    const ownGoalTag = data.ownGoal ? ' <span style="font-size:0.7rem;color:var(--red);letter-spacing:1px">(C.G.)</span>' : '';
+    const currentScore = `${Number(data.match.score1)||0} × ${Number(data.match.score2)||0}`;
+    inner = `
+      <div class="popup-icon">⚽</div>
+      <div class="popup-eyebrow">${CAT_LABELS[data.cat]} · ${data.match.code || ''}</div>
+      <div class="popup-headline">GOOOOOL!</div>
+      <div class="popup-scorer">${data.scorer}${ownGoalTag}</div>
+      <div class="popup-team-tag">${data.team}</div>
+      <div class="popup-vs">${data.match.team1} &nbsp;×&nbsp; ${data.match.team2}</div>
+      <div class="popup-big-score">${currentScore}</div>`;
+  } else if (data.type === 'live') {
+    inner = `
+      <div class="popup-icon">🟢</div>
+      <div class="popup-eyebrow">${CAT_LABELS[data.cat]}${data.match.time ? ' · ' + data.match.time : ''}</div>
+      <div class="popup-headline">EN VIVO</div>
+      <div class="popup-match-teams">${data.match.team1}</div>
+      <div class="popup-sub" style="font-size:1rem;letter-spacing:4px">VS</div>
+      <div class="popup-match-teams">${data.match.team2}</div>`;
+  } else if (data.type === 'finished') {
+    const w   = getWinner(data.match);
+    const pen = data.match.penalty
+      ? `<div class="popup-sub">Penales: ${data.match.pen1} × ${data.match.pen2}</div>` : '';
+    inner = `
+      <div class="popup-icon">🏁</div>
+      <div class="popup-eyebrow">${CAT_LABELS[data.cat]} · Resultado final</div>
+      <div class="popup-headline">FIN</div>
+      <div class="popup-big-score">${Number(data.match.score1)||0} × ${Number(data.match.score2)||0}</div>
+      <div class="popup-match-teams">${data.match.team1} <span style="opacity:0.4;font-weight:400">vs</span> ${data.match.team2}</div>
+      ${pen}
+      ${w ? `<div class="popup-winner-tag">🏆 ${w}</div>` : ''}`;
+  }
+
+  popup.innerHTML = inner +
+    `<div class="popup-progress"><div class="popup-progress-fill"></div></div>`;
+
+  overlay.classList.add('show');
+
+  // Animate progress bar drain (double rAF ensures paint before transition)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const pf = popup.querySelector('.popup-progress-fill');
+    if (pf) {
+      pf.style.transition = `width ${POPUP_DURATION_MS}ms linear`;
+      pf.style.width = '0%';
+    }
+  }));
+
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    setTimeout(() => { popupActive = false; showNextPopup(); }, 450);
+  }, POPUP_DURATION_MS);
+}
+
+/* ══════════════════════
+   CHANGE DETECTION
+══════════════════════ */
+const prevMatchState = {};   // { cat: { matchId: { goalsCount, status } } }
+const initialized    = {};   // { cat: boolean } — skip popups on first load
+
+function detectChanges(cat, newData) {
+  if (!prevMatchState[cat]) prevMatchState[cat] = {};
+  const isFirst = !initialized[cat];
+
+  Object.entries(newData).forEach(([id, m]) => {
+    const prev         = prevMatchState[cat][id];
+    const newGoalCount = toArr(m.goalsData).length;
+
+    if (!prev) {
+      // First time we see this match — record state, no popup
+      prevMatchState[cat][id] = { goalsCount: newGoalCount, status: m.status };
+      return;
+    }
+
+    if (!isFirst) {
+      // ── New goal(s) ──
+      if (newGoalCount > prev.goalsCount) {
+        const goals = toArr(m.goalsData);
+        for (let i = prev.goalsCount; i < newGoalCount; i++) {
+          const g = goals[i];
+          if (g) {
+            const teamName = g.teamSlot == 1 ? (m.team1||'Equipo 1') : (m.team2||'Equipo 2');
+            queuePopup({ type:'goal', cat, match:m,
+              scorer: g.player || '?', team: teamName, ownGoal: !!g.ownGoal });
+          }
+        }
+      }
+
+      // ── Status change ──
+      if (m.status !== prev.status) {
+        if (m.status === 'live')     queuePopup({ type:'live',     cat, match:m });
+        if (m.status === 'finished') queuePopup({ type:'finished', cat, match:m });
+      }
+    }
+
+    // Update recorded state
+    prevMatchState[cat][id] = { goalsCount: newGoalCount, status: m.status };
+  });
+
+  if (isFirst) initialized[cat] = true;
+}
+
 /* ── Firebase subscriptions ── */
 CATEGORIES.forEach(cat => {
   onValue(ref(db, `matches/${cat}`), snap => {
-    allMatches[cat] = snap.val() || {};
+    const newData = snap.val() || {};
+    detectChanges(cat, newData);       // compare BEFORE updating allMatches
+    allMatches[cat] = newData;
     buildBracket(cat);
+    requestAnimationFrame(fitTeamNames);
     buildGoleadores();
     buildTicker();
   });
@@ -893,6 +1142,7 @@ setInterval(updateClock, 5000);
 
 /* ── Boot ── */
 renderAll();
+requestAnimationFrame(fitTeamNames);
 scheduleNext();
 startProgress();
 </script>
