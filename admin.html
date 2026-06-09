@@ -128,7 +128,8 @@
   .pen-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--border);}
   .pen-row label{font-size:0.68rem;}
   .pen-row input[type=checkbox]{accent-color:var(--yellow);width:14px;height:14px;cursor:pointer;}
-  input.pen-inp{width:44px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;}
+  input.pen-inp{width:64px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;-moz-appearance:textfield;}
+  input.pen-inp::-webkit-inner-spin-button,input.pen-inp::-webkit-outer-spin-button{display:none;}
   .pen-hint{font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);letter-spacing:0.8px;margin-left:4px;}
   .row-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .status-pill{font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 10px;border-radius:20px;}
@@ -702,11 +703,31 @@
       const penChecked = document.getElementById(`pen-${id}`)?.checked || false;
       const pen1       = parseInt(document.getElementById(`p1-${id}`)?.value) || 0;
       const pen2       = parseInt(document.getElementById(`p2-${id}`)?.value) || 0;
+      const s1         = Number(m.score1) || 0;
+      const s2         = Number(m.score2) || 0;
 
-      // Validate
+      // ── Validar ANTES de guardar ──
+      // Si hay empate y no marcaron penales → abrir sección y bloquear
+      if (s1 === s2 && !penChecked) {
+        const cb = document.getElementById(`pen-${id}`);
+        const pi = document.getElementById(`pen-inputs-${id}`);
+        if (cb) cb.checked = true;
+        if (pi) pi.style.display = 'contents';
+        document.getElementById(`p1-${id}`)?.focus();
+        toast('⚠ Empate — ingresá el resultado de los penales antes de Finalizar');
+        return;
+      }
       if (penChecked && pen1 === pen2) {
         toast('⚠ En penales los marcadores deben ser distintos'); return;
       }
+
+      // Determinar ganador ANTES de guardar
+      let winner;
+      if (penChecked)   winner = pen1 > pen2 ? m.team1 : m.team2;
+      else if (s1 > s2) winner = m.team1;
+      else if (s2 > s1) winner = m.team2;
+      else              winner = null;
+      if (!winner) { toast('⚠ No se puede finalizar sin un ganador'); return; }
 
       // Save status + penalty data in one single update
       await update(ref(db, `matches/${cat}/${id}`), {
@@ -715,17 +736,6 @@
         pen1    : penChecked ? pen1 : 0,
         pen2    : penChecked ? pen2 : 0
       });
-
-      // Determine winner with fresh values
-      const s1 = Number(m.score1) || 0;
-      const s2 = Number(m.score2) || 0;
-      let winner;
-      if (penChecked)       winner = pen1 > pen2 ? m.team1 : m.team2;
-      else if (s1 > s2)     winner = m.team1;
-      else if (s2 > s1)     winner = m.team2;
-      else                  winner = null;
-
-      if (!winner) { toast('⚠ Empate sin penales — marque la casilla si hubo penales'); return; }
 
       const loser = winner === m.team1 ? m.team2 : m.team1;
       if (m.nextMatch && (m.nextSlot === '1' || m.nextSlot === '2')) {
