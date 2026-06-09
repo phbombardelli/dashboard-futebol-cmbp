@@ -214,7 +214,11 @@
     flex-shrink: 0;
     transition: border-color 0.3s;
   }
-  .bk-card.live   { border-color: var(--red);    box-shadow: 0 0 14px rgba(255,23,68,0.18); }
+  @keyframes bk-live-pulse {
+    0%, 100% { box-shadow: 0 0 6px  rgba(255,23,68,0.2),  0 0 0 0px rgba(255,23,68,0);    border-color: rgba(255,23,68,0.7); }
+    50%       { box-shadow: 0 0 28px rgba(255,23,68,0.55), 0 0 0 5px rgba(255,23,68,0.12); border-color: rgba(255,23,68,1);   }
+  }
+  .bk-card.live   { animation: bk-live-pulse 1.8s ease-in-out infinite; }
   .bk-card.finished { border-color: var(--border2); }
   .bk-card.empty  { border-style:dashed; border-color: var(--border); background: transparent; opacity:0.5; }
 
@@ -362,21 +366,22 @@
   }
 
   .gol-col-hdr {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-    font-family:'Bebas Neue',sans-serif;
-    font-size: 1.15rem; letter-spacing: 4px; color: var(--yellow);
-    display: flex; align-items: center; gap: 8px;
+    padding: 0.85rem 1rem 0.7rem;
+    border-bottom: 3px solid var(--yellow);
+    background: linear-gradient(180deg, rgba(255,214,0,0.07) 0%, transparent 100%);
+    text-align: center;
     flex-shrink: 0;
   }
-  .gol-col-hdr .cat-badge {
-    margin-left: auto;
+  .gol-cat-name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 1.9rem; letter-spacing: 7px; line-height: 1;
+    color: var(--yellow);
+    text-shadow: 0 0 22px rgba(255,214,0,0.35);
+  }
+  .gol-cat-sub {
     font-family:'Barlow Condensed',sans-serif;
-    font-size:0.62rem; letter-spacing:2px; color:var(--muted);
-    background:var(--green-faint);
-    border:1px solid var(--border);
-    border-radius:12px; padding:2px 8px;
+    font-size: 0.62rem; letter-spacing: 3px; color: var(--muted);
+    text-transform: uppercase; margin-top: 3px;
   }
 
   .gol-list {
@@ -637,6 +642,116 @@
     animation-delay: var(--cd, 0s);
   }
 
+  /* ── FINAL SPLASH ── */
+  #final-splash {
+    position: fixed; inset: 0; z-index: 500;
+    display: none;
+    background: radial-gradient(ellipse 65% 55% at 50% 38%,
+      rgba(0,70,0,0.45) 0%, #040904 68%);
+    align-items: center; justify-content: center;
+    text-align: center; overflow: hidden;
+  }
+  #final-splash.show { display: flex; animation: fs-in 0.55s ease both; }
+  #final-splash.out  { animation: fs-out 0.65s ease both; }
+  @keyframes fs-in  { from { opacity:0; } to { opacity:1; } }
+  @keyframes fs-out { from { opacity:1; } to { opacity:0; } }
+
+  .fs-rays {
+    position: absolute;
+    width: 220vmax; height: 220vmax;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    background: repeating-conic-gradient(
+      rgba(255,214,0,0.025) 0deg, rgba(0,200,83,0.018) 9deg, transparent 18deg
+    );
+    animation: fs-spin 28s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes fs-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  .fs-content {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 0.55rem;
+  }
+  .fs-cat-lbl {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size: 0.95rem; letter-spacing: 6px;
+    color: var(--muted); text-transform: uppercase;
+    animation: fs-el 0.5s ease 0.2s both;
+  }
+  .fs-trophy {
+    font-size: 9rem; line-height: 1;
+    filter: drop-shadow(0 0 35px rgba(255,214,0,0.55));
+    animation: fs-trophy-drop 0.85s cubic-bezier(0.34,1.56,0.64,1) 0.4s both;
+  }
+  @keyframes fs-trophy-drop {
+    0%   { transform:translateY(-110px) scale(0.35); opacity:0; }
+    70%  { transform:translateY(10px)   scale(1.06); opacity:1; }
+    100% { transform:translateY(0)      scale(1);    opacity:1; }
+  }
+  .fs-campeon {
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 5.8rem; letter-spacing: 14px; line-height: 1;
+    color: var(--yellow);
+    text-shadow: 0 0 55px rgba(255,214,0,0.55), 0 0 110px rgba(255,214,0,0.18);
+    animation: fs-el 0.6s ease 0.9s both;
+  }
+  .fs-winner-name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 3.2rem; letter-spacing: 6px; line-height: 1;
+    color: #fff; animation: fs-el 0.55s ease 1.1s both;
+  }
+  .fs-divider {
+    width: 70px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    animation: fs-el 0.5s ease 1.2s both;
+  }
+  .fs-score-line {
+    display: flex; align-items: center; gap: 2rem;
+    animation: fs-el 0.55s ease 1.3s both;
+  }
+  .fs-team {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size: 1.5rem; font-weight:700; letter-spacing:2px;
+    color: var(--muted); text-transform:uppercase;
+    min-width: 160px;
+  }
+  .fs-team.champ { color: var(--yellow); }
+  .fs-team.right { text-align:right; }
+  .fs-big-score {
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 4.5rem; letter-spacing: 8px; color: #fff; line-height: 1;
+  }
+  .fs-pen-note {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size: 0.82rem; letter-spacing: 2px; color: var(--muted);
+    animation: fs-el 0.5s ease 1.4s both;
+  }
+  @keyframes fs-el {
+    from { opacity:0; transform:translateY(18px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .fs-progress {
+    position: absolute; bottom:0; left:0; right:0; height:5px;
+    background: rgba(255,255,255,0.06);
+  }
+  .fs-progress-fill {
+    height:100%; width:100%;
+    background: linear-gradient(90deg, var(--green), var(--yellow));
+  }
+  /* Confetti for final */
+  .fs-confetti-item {
+    position: absolute;
+    font-size: var(--cs, 1.5rem);
+    animation: fs-fall var(--cd, 3s) ease-in var(--cdl, 0s) both;
+    pointer-events: none;
+  }
+  @keyframes fs-fall {
+    0%   { transform:translateY(-80px) rotate(0deg); opacity:1; }
+    100% { transform:translateY(105vh)  rotate(var(--cr, 360deg)); opacity:0.2; }
+  }
+
   /* ── NO DATA placeholder ── */
   .no-data {
     flex:1; display:flex; align-items:center; justify-content:center;
@@ -706,6 +821,25 @@
 <!-- ── EVENT POPUP ── -->
 <div id="tv-popup-overlay">
   <div id="tv-popup"></div>
+</div>
+
+<!-- ── FINAL SPLASH ── -->
+<div id="final-splash">
+  <div class="fs-rays"></div>
+  <div class="fs-content">
+    <div class="fs-cat-lbl"   id="fs-cat-lbl"></div>
+    <div class="fs-trophy">🏆</div>
+    <div class="fs-campeon">CAMPEÓN</div>
+    <div class="fs-winner-name" id="fs-winner-name"></div>
+    <div class="fs-divider"></div>
+    <div class="fs-score-line">
+      <div class="fs-team"       id="fs-team1"></div>
+      <div class="fs-big-score"  id="fs-big-score"></div>
+      <div class="fs-team right" id="fs-team2"></div>
+    </div>
+    <div class="fs-pen-note" id="fs-pen-note"></div>
+  </div>
+  <div class="fs-progress"><div class="fs-progress-fill" id="fs-progress-fill"></div></div>
 </div>
 
 <!-- ── LIVE TICKER ── -->
@@ -924,8 +1058,8 @@ function buildGoleadores() {
     html += `
       <div class="gol-col">
         <div class="gol-col-hdr">
-          ⚽ Goleadores
-          <span class="cat-badge">${CAT_LABELS[cat]}</span>
+          <div class="gol-cat-name">${CAT_LABELS[cat]}</div>
+          <div class="gol-cat-sub">⚽ Goleadores</div>
         </div>`;
 
     if (!list.length) {
@@ -1088,6 +1222,83 @@ function showNextPopup() {
 }
 
 /* ══════════════════════
+   FINAL SPLASH
+══════════════════════ */
+const FINAL_MS = 8000;
+let finalActive = false;
+
+function showFinalSplash(cat, match) {
+  if (finalActive) return;
+  const w = getWinner(match);
+  if (!w) return;
+  finalActive = true;
+
+  const splash = document.getElementById('final-splash');
+  const s1 = Number(match.score1)||0;
+  const s2 = Number(match.score2)||0;
+  const isW1 = w === match.team1;
+
+  document.getElementById('fs-cat-lbl').textContent   = CAT_LABELS[cat] || cat;
+  document.getElementById('fs-winner-name').textContent = w;
+  document.getElementById('fs-big-score').textContent   = `${s1} × ${s2}`;
+
+  const t1 = document.getElementById('fs-team1');
+  const t2 = document.getElementById('fs-team2');
+  t1.textContent = match.team1 || '';
+  t2.textContent = match.team2 || '';
+  t1.className = 'fs-team'       + (isW1  ? ' champ' : '');
+  t2.className = 'fs-team right' + (!isW1 ? ' champ' : '');
+
+  const pen = document.getElementById('fs-pen-note');
+  pen.textContent = match.penalty ? `Penales: ${match.pen1} × ${match.pen2}` : '';
+
+  // Confetti
+  spawnFinalConfetti(splash);
+
+  // Show
+  splash.classList.add('show');
+
+  // Progress bar
+  const bar = document.getElementById('fs-progress-fill');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${FINAL_MS}ms linear`;
+    bar.style.width = '0%';
+  }));
+
+  // Pause carousel while visible
+  clearTimeout(slideTimeout);
+
+  setTimeout(() => {
+    splash.classList.add('out');
+    setTimeout(() => {
+      splash.classList.remove('show','out');
+      splash.querySelectorAll('.fs-confetti-item').forEach(e => e.remove());
+      finalActive = false;
+      scheduleNext();  // resume carousel
+    }, 700);
+  }, FINAL_MS);
+}
+
+function spawnFinalConfetti(container) {
+  const items = ['🎊','🎉','⭐','✨','🏅','🌟','💛','💚','🎖️','🥇','🏆','🎊'];
+  const count = 22;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'fs-confetti-item';
+    el.textContent = items[i % items.length];
+    el.style.left = (Math.random() * 100) + 'vw';
+    el.style.top  = '0';
+    el.style.setProperty('--cs',  (1.1 + Math.random() * 1.3).toFixed(1) + 'rem');
+    el.style.setProperty('--cd',  (2.2 + Math.random() * 3).toFixed(1)   + 's');
+    el.style.setProperty('--cdl', (Math.random() * 2).toFixed(2)          + 's');
+    el.style.setProperty('--cr',  (Math.random() * 720 - 360).toFixed(0) + 'deg');
+    container.appendChild(el);
+  }
+}
+
+/* ══════════════════════
    GOAL BURST FUNCTION
 ══════════════════════ */
 function spawnGoalBurst(overlay) {
@@ -1159,7 +1370,10 @@ function detectChanges(cat, newData) {
       // ── Status change ──
       if (m.status !== prev.status) {
         if (m.status === 'live')     queuePopup({ type:'live',     cat, match:m });
-        if (m.status === 'finished') queuePopup({ type:'finished', cat, match:m });
+        if (m.status === 'finished') {
+          queuePopup({ type:'finished', cat, match:m });
+          if (m.phase === 'final') showFinalSplash(cat, m);
+        }
       }
     }
 
