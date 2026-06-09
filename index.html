@@ -501,6 +501,83 @@
     letter-spacing:1px; font-size:0.85rem;
   }
 
+  /* ── PUSH NOTIFICATIONS ── */
+  #notif-container {
+    position:fixed; bottom:1.1rem; left:50%;
+    transform:translateX(-50%);
+    width:calc(100% - 2rem); max-width:420px;
+    z-index:999;
+    display:flex; flex-direction:column-reverse; gap:8px;
+    pointer-events:none;
+  }
+  .notif {
+    width:100%;
+    background:rgba(15,23,16,0.97);
+    border:1px solid rgba(0,200,83,0.2);
+    border-left:4px solid var(--green);
+    border-radius:12px;
+    padding:11px 13px 14px;
+    display:flex; align-items:center; gap:11px;
+    pointer-events:auto;
+    box-shadow:0 6px 28px rgba(0,0,0,0.55);
+    position:relative; overflow:hidden;
+    animation:notif-in 0.38s cubic-bezier(0.34,1.56,0.64,1) both;
+    cursor:default;
+  }
+  .notif.notif-live   { border-left-color:var(--green); }
+  .notif.notif-finish { border-left-color:#40c4ff; }
+  .notif.notif-out {
+    animation:notif-out 0.3s ease both;
+  }
+  @keyframes notif-in {
+    from { transform:translateY(28px) scale(0.95); opacity:0; }
+    to   { transform:translateY(0)    scale(1);    opacity:1; }
+  }
+  @keyframes notif-out {
+    from { transform:translateY(0)   scale(1);    opacity:1; max-height:120px; margin-bottom:0; }
+    to   { transform:translateY(12px) scale(0.95); opacity:0; max-height:0;    margin-bottom:-8px; }
+  }
+  .notif-icon {
+    font-size:1.65rem; line-height:1; flex-shrink:0;
+  }
+  .notif-body {
+    flex:1; min-width:0;
+  }
+  .notif-title {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:0.78rem; letter-spacing:3px; line-height:1.1;
+    color:var(--green); text-transform:uppercase;
+  }
+  .notif-finish .notif-title { color:#40c4ff; }
+  .notif-line1 {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.95rem; font-weight:700;
+    color:var(--text); letter-spacing:0.3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-top:1px;
+  }
+  .notif-line2 {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:0.72rem; color:var(--muted);
+    letter-spacing:0.5px; margin-top:1px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .notif-score {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.45rem; letter-spacing:3px;
+    color:var(--yellow); flex-shrink:0;
+  }
+  .notif-bar {
+    position:absolute; bottom:0; left:0; right:0; height:3px;
+    background:var(--green); border-radius:0 0 10px 10px;
+    transform-origin:left;
+  }
+  .notif-finish .notif-bar { background:#40c4ff; }
+  @keyframes notif-drain {
+    from { transform:scaleX(1); }
+    to   { transform:scaleX(0); }
+  }
+
 </style>
 </head>
 <body>
@@ -757,9 +834,104 @@
     document.getElementById('tab-podio').style.display = hasAny ? '' : 'none';
   }
 
+  /* ══════════════════════
+     PUSH NOTIFICATIONS
+  ══════════════════════ */
+  const NOTIF_MS   = 4500;
+  const prevState  = {};   // { cat: { matchId: { status, goalsCount } } }
+  const notifInited = {};  // { cat: bool }
+
+  function showNotif(data) {
+    const container = document.getElementById('notif-container');
+    if (!container) return;
+
+    let icon, title, line1, line2, score = '';
+
+    if (data.type === 'goal') {
+      icon  = '⚽';
+      title = 'GOL!';
+      line1 = data.scorer + (data.ownGoal ? ' (C.G.)' : '');
+      line2 = `${data.team} · ${data.match.team1} × ${data.match.team2}`;
+      score = `${Number(data.match.score1)||0}×${Number(data.match.score2)||0}`;
+    } else if (data.type === 'live') {
+      icon  = '🟢';
+      title = 'EN VIVO';
+      line1 = `${data.match.team1} vs ${data.match.team2}`;
+      line2 = CAT_LABELS[data.cat] + (data.match.time ? ' · ' + data.match.time : '');
+    } else {
+      icon  = '🏁';
+      title = 'FINALIZADO';
+      const s1 = Number(data.match.score1)||0, s2 = Number(data.match.score2)||0;
+      line1 = `${data.match.team1}  ${s1} – ${s2}  ${data.match.team2}`;
+      line2 = CAT_LABELS[data.cat] + (data.match.penalty ? ` · Pen. ${data.match.pen1}×${data.match.pen2}` : '');
+    }
+
+    const el = document.createElement('div');
+    el.className = `notif notif-${data.type === 'goal' ? 'goal' : data.type === 'live' ? 'live' : 'finish'}`;
+    el.innerHTML = `
+      <div class="notif-icon">${icon}</div>
+      <div class="notif-body">
+        <div class="notif-title">${title}</div>
+        <div class="notif-line1">${line1}</div>
+        <div class="notif-line2">${line2}</div>
+      </div>
+      ${score ? `<div class="notif-score">${score}</div>` : ''}
+      <div class="notif-bar"></div>`;
+
+    container.appendChild(el);
+
+    // Drain bar
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const bar = el.querySelector('.notif-bar');
+      if (bar) { bar.style.transition = `transform ${NOTIF_MS}ms linear`; bar.style.transform = 'scaleX(0)'; }
+    }));
+
+    // Auto-dismiss
+    setTimeout(() => {
+      el.classList.add('notif-out');
+      setTimeout(() => el.remove(), 350);
+    }, NOTIF_MS);
+  }
+
+  function detectNotifs(cat, newData) {
+    if (!prevState[cat]) prevState[cat] = {};
+    const wasInited = !!notifInited[cat];
+
+    Object.entries(newData).forEach(([id, m]) => {
+      const prev       = prevState[cat][id];
+      const goalsNow   = toArr(m.goalsData).length;
+
+      if (wasInited && prev) {
+        // ── Goal ──
+        if (goalsNow > prev.goalsCount) {
+          toArr(m.goalsData).slice(prev.goalsCount).forEach(g => {
+            showNotif({
+              type: 'goal', cat, match: m,
+              scorer: g.player,
+              team: g.teamSlot == 1 ? (m.team1||'?') : (m.team2||'?'),
+              ownGoal: !!g.ownGoal
+            });
+          });
+        }
+        // ── En vivo ──
+        if (prev.status !== 'live'     && m.status === 'live')
+          showNotif({ type: 'live',     cat, match: m });
+        // ── Finalizado ──
+        if (prev.status !== 'finished' && m.status === 'finished')
+          showNotif({ type: 'finished', cat, match: m });
+      }
+
+      prevState[cat][id] = { status: m.status, goalsCount: goalsNow };
+    });
+
+    notifInited[cat] = true;
+  }
+
   CATEGORIES.forEach(cat => {
     onValue(ref(db, `matches/${cat}`), snap => {
-      allMatches[cat] = snap.val() || {};
+      const data = snap.val() || {};
+      detectNotifs(cat, data);          // detect BEFORE overwriting allMatches
+      allMatches[cat] = data;
       renderCategory(cat, allMatches[cat]);
       renderPodio();
       renderGoleadores();
@@ -768,5 +940,9 @@
     });
   });
 </script>
+
+<!-- ── PUSH NOTIFICATIONS CONTAINER ── -->
+<div id="notif-container"></div>
+
 </body>
 </html>
