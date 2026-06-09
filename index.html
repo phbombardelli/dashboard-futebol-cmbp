@@ -850,7 +850,7 @@
     if (data.type === 'goal') {
       icon  = '⚽';
       title = 'GOL!';
-      line1 = data.scorer + (data.ownGoal ? ' (C.G.)' : '');
+      line1 = data.scorer + (data.ownGoal ? ' (en contra)' : '');
       line2 = `${data.team} · ${data.match.team1} × ${data.match.team2}`;
       score = `${Number(data.match.score1)||0}×${Number(data.match.score2)||0}`;
     } else if (data.type === 'live') {

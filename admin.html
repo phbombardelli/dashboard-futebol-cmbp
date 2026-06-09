@@ -415,7 +415,7 @@
   function buildGoalsText(gd, slot) {
     return toArr(gd)
       .filter(g => g.teamSlot == slot)
-      .map(g => g.ownGoal ? `${g.player} (C.G.)` : g.player)
+      .map(g => g.ownGoal ? `${g.player} (en contra)` : g.player)
       .join('\n');
   }
 

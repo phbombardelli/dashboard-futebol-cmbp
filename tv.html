@@ -1028,7 +1028,7 @@ function showNextPopup() {
   let inner = '';
 
   if (data.type === 'goal') {
-    const ownGoalTag = data.ownGoal ? ' <span style="font-size:0.7rem;color:var(--red);letter-spacing:1px">(C.G.)</span>' : '';
+    const ownGoalTag = data.ownGoal ? ' <span style="font-size:0.7rem;color:var(--red);letter-spacing:1px">(en contra)</span>' : '';
     const currentScore = `${Number(data.match.score1)||0} × ${Number(data.match.score2)||0}`;
     // Crowd bars: 14 bars with staggered animation delay
     const crowdBars = Array.from({length:14},(_,i)=>`<div class="goal-crowd-bar" style="--cd:${(i*0.04).toFixed(2)}s;height:${8+Math.round(Math.sin(i*0.7+1)*8)}px"></div>`).join('');
